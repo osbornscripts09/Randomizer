@@ -1,0 +1,192 @@
+
+--[[ Visual Egg Randomizer GUI with Dark/Light Mode and Server-Side Egg Detection ]]
+-- Author: osbornscripts09
+-- Paste this into a LocalScript under StarterPlayerScripts
+
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+
+local ESPEnabled = false
+local desiredPet = ""
+local isDarkMode = true
+local assignedPets = {}
+local activeLabels = {}
+
+local eggToPets = {
+	["Common Egg"] = {"Bunny", "Mouse", "Deer"},
+	["Uncommon Egg"] = {"Fox", "Raccoon", "Goat"},
+	["Bug Egg"] = {"Ladybug", "Beetle", "Dragonfly"},
+	["Bee Egg"] = {"Honey Bee", "Worker Bee", "Queen Bee"},
+	["Dino Egg"] = {"Triceratops", "Raptor", "T-Rex"},
+	["Fantasy Egg"] = {"Fairy", "Unicorn", "Dragon"},
+	["Mystic Egg"] = {"Phantom", "Spirit Deer", "Celestial Fox"},
+}
+
+local themes = {
+	Dark = {
+		bg = Color3.fromRGB(30, 30, 30),
+		text = Color3.fromRGB(255, 255, 255),
+		button = Color3.fromRGB(50, 50, 50),
+		highlight = Color3.fromRGB(255, 100, 100)
+	},
+	Light = {
+		bg = Color3.fromRGB(245, 245, 245),
+		text = Color3.fromRGB(0, 0, 0),
+		button = Color3.fromRGB(230, 230, 230),
+		highlight = Color3.fromRGB(255, 50, 50)
+	}
+}
+
+-- UI Helper
+local function createUI(class, props)
+	local inst = Instance.new(class)
+	for k, v in pairs(props) do
+		inst[k] = v
+	end
+	return inst
+end
+
+-- GUI Setup
+local gui = createUI("ScreenGui", {
+	Name = "EggESPUI",
+	IgnoreGuiInset = true,
+	ResetOnSpawn = false,
+	Parent = player:WaitForChild("PlayerGui")
+})
+
+local buttons = {}
+
+local function makeButton(name, pos, text)
+	local btn = createUI("TextButton", {
+		Name = name,
+		Size = UDim2.new(0, 160, 0, 40),
+		Position = pos,
+		Text = text,
+		Font = Enum.Font.GothamBold,
+		TextScaled = true,
+		BackgroundColor3 = themes.Dark.button,
+		TextColor3 = themes.Dark.text,
+		Parent = gui
+	})
+	buttons[name] = btn
+	return btn
+end
+
+local randomBtn = makeButton("RandomizeButton", UDim2.new(0.02, 0, 0.12, 0), "🎲 Randomize")
+local espBtn = makeButton("ESPToggle", UDim2.new(0.02, 0, 0.2, 0), "👁️ ESP: OFF")
+local modeBtn = makeButton("ModeToggle", UDim2.new(0.02, 0, 0.28, 0), "☀️ Light Mode")
+
+local desiredBox = createUI("TextBox", {
+	Name = "DesiredPetBox",
+	Size = UDim2.new(0, 160, 0, 40),
+	Position = UDim2.new(0.02, 0, 0.36, 0),
+	Font = Enum.Font.Gotham,
+	TextScaled = true,
+	PlaceholderText = "Desired Pet",
+	BackgroundColor3 = themes.Dark.button,
+	TextColor3 = themes.Dark.text,
+	ClearTextOnFocus = false,
+	Parent = gui
+})
+
+local function updateTheme()
+	local theme = isDarkMode and themes.Dark or themes.Light
+	gui.BackgroundColor3 = theme.bg
+	for _, btn in pairs(buttons) do
+		btn.BackgroundColor3 = theme.button
+		btn.TextColor3 = theme.text
+	end
+	desiredBox.BackgroundColor3 = theme.button
+	desiredBox.TextColor3 = theme.text
+	modeBtn.Text = isDarkMode and "☀️ Light Mode" or "🌙 Dark Mode"
+end
+
+updateTheme()
+
+local function clearLabels()
+	for _, label in pairs(activeLabels) do
+		if label and label.Parent then
+			label:Destroy()
+		end
+	end
+	activeLabels = {}
+end
+
+local function createLabel(egg, pet)
+	local adornee = egg:FindFirstChild("Head") or egg:FindFirstChildWhichIsA("BasePart")
+	if not adornee then return end
+
+	local theme = isDarkMode and themes.Dark or themes.Light
+
+	local gui = Instance.new("BillboardGui")
+	gui.Size = UDim2.new(0, 100, 0, 25)
+	gui.StudsOffset = Vector3.new(0, 3, 0)
+	gui.Adornee = adornee
+	gui.AlwaysOnTop = true
+	gui.Name = "PetESP"
+
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(1, 0, 1, 0)
+	label.BackgroundTransparency = 1
+	label.Text = pet
+	label.TextScaled = true
+	label.Font = (pet == desiredPet) and Enum.Font.GothamBold or Enum.Font.Gotham
+	label.TextColor3 = (pet == desiredPet) and theme.highlight or theme.text
+	label.TextStrokeTransparency = 0.7
+	label.Parent = gui
+
+	gui.Parent = egg
+	table.insert(activeLabels, gui)
+end
+
+local function assignPetToEgg(egg)
+	if not assignedPets[egg] and eggToPets[egg.Name] then
+		local options = eggToPets[egg.Name]
+		local pet = options[math.random(1, #options)]
+		assignedPets[egg] = pet
+	end
+	return assignedPets[egg]
+end
+
+-- Server-compatible ESP update
+RunService.RenderStepped:Connect(function()
+	if not ESPEnabled then return end
+
+	clearLabels()
+
+	for _, egg in pairs(workspace:GetDescendants()) do
+		if egg:IsA("Model") and eggToPets[egg.Name] then
+			local pet = assignPetToEgg(egg)
+			if pet then
+				createLabel(egg, pet)
+			end
+		end
+	end
+end)
+
+-- Button logic
+randomBtn.MouseButton1Click:Connect(function()
+	clearLabels()
+	assignedPets = {}
+	randomBtn.Text = "Randomizing..."
+	task.wait(math.random(10, 15))
+	randomBtn.Text = "🎲 Randomize"
+end)
+
+espBtn.MouseButton1Click:Connect(function()
+	ESPEnabled = not ESPEnabled
+	espBtn.Text = ESPEnabled and "👁️ ESP: ON" or "👁️ ESP: OFF"
+	if not ESPEnabled then clearLabels() end
+end)
+
+modeBtn.MouseButton1Click:Connect(function()
+	isDarkMode = not isDarkMode
+	updateTheme()
+end)
+
+desiredBox.FocusLost:Connect(function(enterPressed)
+	if enterPressed then
+		desiredPet = desiredBox.Text
+	end
+end)
