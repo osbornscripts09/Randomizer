@@ -1,0 +1,138 @@
+-- KenScripts: Visual Egg Randomizer GUI with Desired Pet Alert + Draggable UI
+-- Accurate as of July 2025 - Based on Grow a Garden Wiki
+
+local Players = game:GetService("Players")
+local StarterGui = game:GetService("StarterGui")
+local player = Players.LocalPlayer
+
+local petMapping = {
+    ["Common Egg"] = {
+        "Bunny", "Chicken", "Duck", "Pig", "Sheep",
+        "Mouse", "Goat", "Deer", "Fox"
+    },
+    ["Bug Egg"] = {
+        "Beetle", "Ladybug", "Caterpillar", "Dragonfly", "Grasshopper"
+    },
+    ["Bee Egg"] = {
+        "Worker Bee", "Bumblebee", "Honey Bee", "Queen Bee"
+    },
+    ["Dino Egg"] = {
+        "T-Rex", "Triceratops", "Stegosaurus", "Velociraptor", "Pterodactyl"
+    },
+    ["Fantasy Egg"] = {
+        "Dragon", "Phoenix", "Fairy", "Griffin"
+    },
+    ["Mystic Egg"] = {
+        "Phantom", "Spirit Deer", "Celestial Fox", "Nebula Cat", "Void Bat"
+    },
+    ["Aquatic Egg"] = {
+        "Dolphin", "Jellyfish", "Sea Turtle", "Octopus", "Shark"
+    },
+    ["Farm Egg"] = {
+        "Cow", "Lamb", "Horse", "Rooster", "Turkey"
+    },
+    ["Night Egg"] = {
+        "Bat", "Ghost Cat", "Owl", "Shadow Fox", "Raccoon"
+    }
+}
+
+local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+gui.Name = "KenRandomizerGUI"
+gui.ResetOnSpawn = false
+
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 250, 0, 200)
+frame.Position = UDim2.new(0.1, 0, 0.1, 0)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.Active = true
+frame.Draggable = true
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
+
+local title = Instance.new("TextLabel", frame)
+title.Text = "KenScripts Randomizer"
+title.Size = UDim2.new(1, 0, 0, 30)
+title.BackgroundTransparency = 1
+title.TextColor3 = Color3.new(1,1,1)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 18
+
+local input = Instance.new("TextBox", frame)
+input.PlaceholderText = "Enter Desired Pet"
+input.Size = UDim2.new(1, -20, 0, 30)
+input.Position = UDim2.new(0, 10, 0, 40)
+input.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+input.TextColor3 = Color3.fromRGB(255, 255, 255)
+input.Font = Enum.Font.Gotham
+input.TextSize = 14
+
+local button = Instance.new("TextButton", frame)
+button.Text = "🎲 Randomize"
+button.Size = UDim2.new(1, -20, 0, 30)
+button.Position = UDim2.new(0, 10, 0, 80)
+button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+button.TextColor3 = Color3.fromRGB(255, 255, 255)
+button.Font = Enum.Font.Gotham
+button.TextSize = 16
+
+local toggle = Instance.new("TextButton", frame)
+toggle.Text = "🔍 ESP: OFF"
+toggle.Size = UDim2.new(1, -20, 0, 30)
+toggle.Position = UDim2.new(0, 10, 0, 120)
+toggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+toggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggle.Font = Enum.Font.Gotham
+toggle.TextSize = 16
+
+local espOn = false
+toggle.MouseButton1Click:Connect(function()
+    espOn = not espOn
+    toggle.Text = espOn and "🔍 ESP: ON" or "🔍 ESP: OFF"
+end)
+
+local function displayPetLabels()
+    local desired = input.Text:lower()
+    for _, egg in pairs(workspace:GetDescendants()) do
+        if egg:IsA("Model") then
+            for eggType, pets in pairs(petMapping) do
+                if egg.Name:lower():find(eggType:lower():gsub(" ", "")) then
+                    local pet = pets[math.random(1, #pets)]
+                    local adornee = egg:FindFirstChildWhichIsA("BasePart")
+
+                    if adornee then
+                        local old = egg:FindFirstChild("KenPetLabel")
+                        if old then old:Destroy() end
+
+                        if espOn then
+                            local gui = Instance.new("BillboardGui", egg)
+                            gui.Name = "KenPetLabel"
+                            gui.Adornee = adornee
+                            gui.Size = UDim2.new(0, 200, 0, 30)
+                            gui.StudsOffset = Vector3.new(0, 3, 0)
+                            gui.AlwaysOnTop = true
+
+                            local lbl = Instance.new("TextLabel", gui)
+                            lbl.Size = UDim2.new(1, 0, 1, 0)
+                            lbl.BackgroundTransparency = 1
+                            lbl.Font = Enum.Font.Gotham
+                            lbl.TextScaled = true
+                            lbl.Text = pet
+                            lbl.TextColor3 = (pet:lower() == desired)
+                                and Color3.fromRGB(255, 200, 0)
+                                or Color3.fromRGB(255, 255, 255)
+
+                            if pet:lower() == desired then
+                                StarterGui:SetCore("SendNotification", {
+                                    Title = "🎉 Pet Found!",
+                                    Text = "Your desired pet '" .. pet .. "' has appeared!",
+                                    Duration = 4
+                                })
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+button.MouseButton1Click:Connect(displayPetLabels)
