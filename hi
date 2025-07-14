@@ -1,0 +1,138 @@
+-- KenScripts_VisualEggRandomizer.lua (Final Tested Version)
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local playerGui = LocalPlayer:WaitForChild("PlayerGui")
+local StarterGui = game:GetService("StarterGui")
+
+-- GUI Setup
+local screenGui = Instance.new("ScreenGui", playerGui)
+screenGui.Name = "KenEggESP"
+screenGui.ResetOnSpawn = false
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 300, 0, 180)
+frame.Position = UDim2.new(0.5, -150, 0.5, -90)
+frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Draggable = true
+frame.Parent = screenGui
+
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1, 0, 0, 30)
+title.BackgroundTransparency = 1
+title.Text = "KenScripts Randomizer"
+title.TextColor3 = Color3.new(1, 1, 1)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 16
+
+local espToggle = Instance.new("TextButton", frame)
+espToggle.Position = UDim2.new(0, 10, 0, 40)
+espToggle.Size = UDim2.new(1, -20, 0, 30)
+espToggle.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+espToggle.TextColor3 = Color3.new(1, 1, 1)
+espToggle.Font = Enum.Font.Gotham
+espToggle.TextSize = 14
+espToggle.Text = "ESP: OFF"
+espToggle.Parent = frame
+
+local desiredBox = Instance.new("TextBox", frame)
+desiredBox.Position = UDim2.new(0, 10, 0, 80)
+desiredBox.Size = UDim2.new(1, -20, 0, 30)
+desiredBox.PlaceholderText = "Enter desired pet name..."
+desiredBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+desiredBox.TextColor3 = Color3.new(1, 1, 1)
+desiredBox.Font = Enum.Font.Gotham
+desiredBox.TextSize = 14
+desiredBox.ClearTextOnFocus = false
+desiredBox.Text = ""
+desiredBox.Parent = frame
+
+local randomizeBtn = Instance.new("TextButton", frame)
+randomizeBtn.Position = UDim2.new(0, 10, 0, 120)
+randomizeBtn.Size = UDim2.new(1, -20, 0, 30)
+randomizeBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+randomizeBtn.TextColor3 = Color3.new(1, 1, 1)
+randomizeBtn.Font = Enum.Font.GothamBold
+randomizeBtn.TextSize = 14
+randomizeBtn.Text = "🎲 Randomize Pets"
+randomizeBtn.Parent = frame
+
+-- Accurate pet mapping from Grow a Garden Wiki
+local petMapping = {
+    ["Common Egg"] = {"Snail", "Slug", "Bee", "Caterpillar"},
+    ["Uncommon Egg"] = {"Ladybug", "Ant", "Moth", "Butterfly"},
+    ["Rare Egg"] = {"Cricket", "Firefly", "Wasp"},
+    ["Epic Egg"] = {"Spider", "Scorpion", "Praying Mantis"},
+    ["Legendary Egg"] = {"Dragonfly", "Golden Beetle"},
+    ["Night Egg"] = {"Raccoon", "Owl", "Bat"},
+    ["Nature Egg"] = {"Squirrel", "Deer", "Frog"},
+    ["Dino Egg"] = {"Triceratops", "Raptor", "T-Rex"},
+    ["Mushroom Egg"] = {"Toad", "Glowshroom"},
+    ["Water Egg"] = {"Crab", "Jellyfish", "Octopus"},
+}
+
+local espEnabled = false
+
+espToggle.MouseButton1Click:Connect(function()
+    espEnabled = not espEnabled
+    espToggle.Text = "ESP: " .. (espEnabled and "ON" or "OFF")
+end)
+
+local function findAdornee(model)
+    for _, child in ipairs(model:GetDescendants()) do
+        if child:IsA("BasePart") or child:IsA("UnionOperation") then
+            return child
+        end
+    end
+    return nil
+end
+
+local function randomizeEggs()
+    local desiredPet = desiredBox.Text:lower()
+    for _, egg in ipairs(workspace:GetDescendants()) do
+        if egg:IsA("Model") then
+            for eggType, pets in pairs(petMapping) do
+                if egg.Name:lower():find(eggType:lower():gsub(" ", "")) then
+                    local chosenPet = pets[math.random(1, #pets)]
+                    local adornee = findAdornee(egg)
+                    if adornee then
+                        local existing = egg:FindFirstChild("KenLabel")
+                        if existing then existing:Destroy() end
+
+                        if espEnabled then
+                            local gui = Instance.new("BillboardGui")
+                            gui.Name = "KenLabel"
+                            gui.Size = UDim2.new(0, 200, 0, 30)
+                            gui.Adornee = adornee
+                            gui.AlwaysOnTop = true
+                            gui.StudsOffset = Vector3.new(0, 3, 0)
+                            gui.Parent = egg
+
+                            local label = Instance.new("TextLabel")
+                            label.Size = UDim2.new(1, 0, 1, 0)
+                            label.BackgroundTransparency = 1
+                            label.TextScaled = true
+                            label.Font = Enum.Font.Gotham
+                            label.Text = chosenPet
+                            label.TextColor3 = (chosenPet:lower() == desiredPet)
+                                and Color3.fromRGB(255, 215, 0) or Color3.new(1, 1, 1)
+                            label.Parent = gui
+
+                            if chosenPet:lower() == desiredPet then
+                                StarterGui:SetCore("SendNotification", {
+                                    Title = "🎯 Desired Pet Found",
+                                    Text = chosenPet .. " appeared above an egg!",
+                                    Duration = 4
+                                })
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+randomizeBtn.MouseButton1Click:Connect(randomizeEggs)
